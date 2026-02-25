@@ -1,0 +1,14 @@
+# Server Settings
+server:
+  port: ${PORT:8080}
+  shutdown: graceful # Allows active requests to finish before stopping
+
+# Graceful period (optional, default is 30s)
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+# Logging context
+logging:
+  level:
+    root: INFO
