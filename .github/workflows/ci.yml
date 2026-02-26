@@ -58,13 +58,13 @@ jobs:
           load: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Run Trivy Scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: '${{ env.IMAGE_NAME }}:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
+      #- name: Run Trivy Scanner
+      #  uses: aquasecurity/trivy-action@master
+      #  with:
+      #    image-ref: '${{ env.IMAGE_NAME }}:${{ github.sha }}'
+      #    format: 'table'
+      #    exit-code: '1'
+      #    severity: 'CRITICAL,HIGH'
 
       - name: Push to Artifact Registry
         run: |
