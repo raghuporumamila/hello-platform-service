@@ -23,7 +23,7 @@ jobs:
       WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
       SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
 
-      REGISTRY_REGION: us-central1
+      REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
       IMAGE_NAME: hello-platform-service
 
     steps:
