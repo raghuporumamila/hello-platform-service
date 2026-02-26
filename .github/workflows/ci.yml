@@ -28,6 +28,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17' # Adjust to your version (11, 17, 21, etc.)
+          distribution: 'temurin'
+          cache: 'maven' # Use 'gradle' if you use Gradle instead of Maven
+
+      - name: Run Unit Tests
+        run: mvn clean test
       - name: GCP Auth (Keyless via WIF)
         uses: google-github-actions/auth@v2
         with:
