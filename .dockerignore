@@ -1,0 +1,9 @@
+target/
+!target/*.jar
+*.log
+.git
+.gitignore
+.mvn/wrapper/*.jar
+.env
+Dockerfile
+.github

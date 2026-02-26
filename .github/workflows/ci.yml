@@ -1,0 +1,62 @@
+name: Hello Platform Service CI
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-scan:
+    # Dynamically select the GitHub Environment based on the target branch
+    environment: ${{ github.base_ref == 'main' && 'prod' || 'dev' }}
+
+    runs-on: ubuntu-latest
+
+    env:
+      # These now pull directly from the selected Environment's variables
+      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+      SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
+
+      REGISTRY_REGION: us-central1
+      IMAGE_NAME: hello-platform-service
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: GCP Auth (Keyless via WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
+
+      - name: Build Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Run Trivy Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_NAME }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push to Artifact Registry
+        run: |
+          REPO_PATH="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/containers/${{ env.IMAGE_NAME }}"
+          docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} $REPO_PATH:${{ github.sha }}
+          docker push $REPO_PATH:${{ github.sha }}
