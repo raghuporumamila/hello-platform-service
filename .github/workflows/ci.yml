@@ -1,6 +1,8 @@
 name: Hello Platform Service CI
 
 on:
+  push:
+    branches: [ develop ]
   pull_request:
     branches: [ develop, main ]
 
