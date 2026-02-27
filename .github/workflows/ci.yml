@@ -1,8 +1,6 @@
 name: Hello Platform Service CI
 
 on:
-  push:
-    branches: [ develop ]
   pull_request:
     branches: [ develop, main ]
 
@@ -14,7 +12,6 @@ jobs:
   build-and-scan:
     # Dynamically select the GitHub Environment based on the target branch
     environment: ${{ github.base_ref == 'main' && 'prod' || 'dev' }}
-
     runs-on: ubuntu-latest
 
     env:
@@ -24,7 +21,7 @@ jobs:
       SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
 
       REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
-      IMAGE_NAME: hello-platform-service
+      IMAGE_NAME: ${{ vars.IMAGE_NAME }}
 
     steps:
       - name: Checkout Code
