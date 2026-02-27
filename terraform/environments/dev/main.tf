@@ -8,7 +8,6 @@ resource "google_service_account" "run_sa" {
   account_id   = "platform-runner-dev"
   display_name = "Cloud Run Executor for dev"
 }
-
 # 2. Call the module
 module "platform_app" {
   source                = "../../hello-platform-terraform/modules/cloud_run"
