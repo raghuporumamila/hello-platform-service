@@ -45,6 +45,12 @@ jobs:
           repository: raghuporumamila/hello-platform-terraform
           path: hello-platform-terraform
 
+      # --- ADD THIS STEP ---
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
       - name: Terraform Validate
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
