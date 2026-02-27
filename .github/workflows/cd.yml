@@ -38,12 +38,14 @@ jobs:
     steps:
       - name: Checkout Project Repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Checkout Common Repo
         uses: actions/checkout@v4
         with:
           repository: raghuporumamila/hello-platform-terraform
-          path: hello-platform-terraform
+          path: terraform/hello-platform-terraform
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
