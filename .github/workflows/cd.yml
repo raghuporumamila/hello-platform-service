@@ -8,11 +8,13 @@ on:
 
 jobs:
   setup:
+    # Trigger ONLY if the CI succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
+      project_id: ${{ steps.set_env.outputs.project_id }}
     steps:
       - id: set_env
         run: |
@@ -23,13 +25,11 @@ jobs:
           if [[ "$BRANCH" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/prod" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH" == "develop" ]]; then
+            echo "project_id=${{ secrets.GCP_PROJECT_ID_PROD }}" >> $GITHUB_OUTPUT
+          else
             echo "env_name=dev" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
-          else
-            # Optional: handle feature branches or exit
-            echo "Triggered by branch $BRANCH, skipping deployment."
-            exit 0
+            echo "project_id=${{ secrets.GCP_PROJECT_ID_DEV }}" >> $GITHUB_OUTPUT
           fi
 
   validate:
@@ -45,7 +45,6 @@ jobs:
           repository: raghuporumamila/hello-platform-terraform
           path: hello-platform-terraform
 
-      # --- ADD THIS STEP ---
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -60,7 +59,6 @@ jobs:
   deploy:
     needs: [ setup, validate ]
     runs-on: ubuntu-latest
-    # This correctly pulls secrets/vars from the 'dev' or 'prod' GitHub Environment
     environment: ${{ needs.setup.outputs.env_name }}
 
     env:
@@ -74,14 +72,19 @@ jobs:
       id-token: 'write'
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Project Repo
+        uses: actions/checkout@v4
 
-      # We must checkout the common modules here too for the actual Apply
       - name: Checkout Common Repo
         uses: actions/checkout@v4
         with:
           repository: raghuporumamila/hello-platform-terraform
           path: hello-platform-terraform
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
 
       - name: Google Auth
         uses: 'google-github-actions/auth@v2'
