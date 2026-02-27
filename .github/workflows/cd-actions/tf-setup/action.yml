@@ -1,0 +1,17 @@
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Project Repo
+      uses: actions/checkout@v4
+      with:
+        # This ensures we get the code from the CI trigger, not the default branch
+        ref: ${{ github.event.workflow_run.head_branch }}
+
+    - name: Google Auth
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+        service_account: ${{ vars.CD_SA_EMAIL }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
