@@ -8,8 +8,6 @@ on:
 
 jobs:
   setup:
-    # This job now starts because it's defined on main,
-    # but it will look at the branch that triggered the CI.
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
