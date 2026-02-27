@@ -8,7 +8,7 @@ import java.util.Map;
 
 @RestController
 public class HelloController {
-    @Value("${APP_COMMIT_SHA:unknown}")
+    @Value("${APP_COMMIT_SHA:development}")
     private String commitSha;
 
     @GetMapping("/")

@@ -31,5 +31,5 @@ ENV APP_COMMIT_SHA=${COMMIT_SHA}
 USER nonroot
 EXPOSE 8080
 
-# Run with optimized memory settings for containers
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# Run with optimized memory settings and bind to the dynamic PORT variable
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-Dserver.port=${PORT}", "-jar", "app.jar"]
