@@ -46,6 +46,13 @@ jobs:
           repository: raghuporumamila/hello-platform-terraform
           path: terraform/hello-platform-terraform
 
+      # ADD THIS STEP BEFORE TERRAFORM INIT
+      - name: Google Auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CD_SA_EMAIL }}
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
