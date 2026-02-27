@@ -66,8 +66,13 @@ jobs:
       #    exit-code: '1'
       #    severity: 'CRITICAL,HIGH'
 
-      - name: Push to Artifact Registry
-        run: |
-          REPO_PATH="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/${{ env.IMAGE_NAME }}"
-          docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} $REPO_PATH:${{ github.sha }}
-          docker push $REPO_PATH:${{ github.sha }}
+      - name: Build and Push to Artifact Registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/${{ env.IMAGE_NAME }:latest
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
