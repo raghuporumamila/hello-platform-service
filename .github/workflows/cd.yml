@@ -65,7 +65,7 @@ jobs:
     env:
       GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
       WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
-      SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
+      CD_SERVICE_ACCOUNT: ${{ vars.CD_SA_EMAIL }}
       REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
 
     permissions:
@@ -91,7 +91,7 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          service_account: ${{ env.CD_SERVICE_ACCOUNT }}
 
       - name: Terraform Apply
         run: |
