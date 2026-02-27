@@ -8,29 +8,30 @@ on:
 
 jobs:
   setup:
-    # Trigger ONLY if the CI succeeded
+    # This job now starts because it's defined on main,
+    # but it will look at the branch that triggered the CI.
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
-      project_id: ${{ steps.set_env.outputs.project_id }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
     steps:
       - id: set_env
         run: |
-          # Capture the branch that the CI actually ran on
+          # Use head_branch to see what branch actually ran the CI
           BRANCH="${{ github.event.workflow_run.head_branch }}"
-          echo "Triggered by branch: $BRANCH"
+          echo "CI was triggered by branch: $BRANCH"
           
           if [[ "$BRANCH" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
-            echo "project_id=${{ secrets.GCP_PROJECT_ID_PROD }}" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/prod" >> $GITHUB_OUTPUT
-          else
-            # Defaulting to dev for 'develop' or feature branches
+          elif [[ "$BRANCH" == "develop" ]]; then
             echo "env_name=dev" >> $GITHUB_OUTPUT
-            echo "project_id=${{ secrets.GCP_PROJECT_ID_DEV }}" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
+          else
+            # Optional: handle feature branches or exit
+            echo "Triggered by branch $BRANCH, skipping deployment."
+            exit 0
           fi
 
   validate:
