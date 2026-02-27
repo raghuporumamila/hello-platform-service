@@ -8,7 +8,7 @@ on:
 
 jobs:
   # --- STAGE 0: SETUP ---
-  setup: # Renamed to 'setup' for clarity and easier 'needs' referencing
+  setup:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
@@ -18,7 +18,10 @@ jobs:
     steps:
       - id: set_env
         run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
+          # Use head_branch to see what branch the CI ran on
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          
+          if [[ "$BRANCH" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
             echo "project_id=${{ secrets.GCP_PROJECT_ID_PROD }}" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/prod" >> $GITHUB_OUTPUT
