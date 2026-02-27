@@ -34,6 +34,9 @@ jobs:
   validate:
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
       - name: Checkout Project Repo
         uses: actions/checkout@v4
