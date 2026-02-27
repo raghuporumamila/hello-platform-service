@@ -1,16 +1,24 @@
 name: 'Terraform Shared Setup'
 description: 'Authenticates with GCP and sets up Terraform'
 
+# 1. Define inputs so the action can receive data from the main workflow
+inputs:
+  wif_provider:
+    description: 'The Workload Identity Provider string'
+    required: true
+  service_account:
+    description: 'The GCP Service Account email'
+    required: true
+
 runs:
   using: "composite"
   steps:
-    # REMOVED: Checkout Project Repo (Now handled in cd.yml)
-
     - name: Google Auth
       uses: 'google-github-actions/auth@v2'
       with:
-        workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-        service_account: ${{ vars.CD_SA_EMAIL }}
+        # 2. Reference the inputs instead of vars
+        workload_identity_provider: ${{ inputs.wif_provider }}
+        service_account: ${{ inputs.service_account }}
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3

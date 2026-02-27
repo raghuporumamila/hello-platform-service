@@ -24,8 +24,6 @@ jobs:
             echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
           fi
 
-    # ... (setup job remains the same)
-
   validate:
     needs: setup
     runs-on: ubuntu-latest
@@ -41,6 +39,10 @@ jobs:
 
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup
+        with:
+          # 3. Pass the variables into the action's inputs
+          wif_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CD_SA_EMAIL }}
 
       - name: Terraform Validate
         run: |
@@ -63,6 +65,10 @@ jobs:
 
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup
+        with:
+          # 4. Repeat the pass-through here
+          wif_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CD_SA_EMAIL }}
 
       - name: Terraform Apply
         run: |
