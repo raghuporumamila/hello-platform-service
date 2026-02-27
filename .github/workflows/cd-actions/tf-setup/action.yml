@@ -1,11 +1,10 @@
+name: 'Terraform Shared Setup'
+description: 'Authenticates with GCP and sets up Terraform'
+
 runs:
   using: "composite"
   steps:
-    - name: Checkout Project Repo
-      uses: actions/checkout@v4
-      with:
-        # This ensures we get the code from the CI trigger, not the default branch
-        ref: ${{ github.event.workflow_run.head_branch }}
+    # REMOVED: Checkout Project Repo (Now handled in cd.yml)
 
     - name: Google Auth
       uses: 'google-github-actions/auth@v2'

@@ -24,6 +24,8 @@ jobs:
             echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
           fi
 
+    # ... (setup job remains the same)
+
   validate:
     needs: setup
     runs-on: ubuntu-latest
@@ -32,8 +34,14 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
+      - name: Checkout to access local action
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup
+
       - name: Terraform Validate
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
@@ -48,6 +56,11 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
+      - name: Checkout to access local action
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup
 
