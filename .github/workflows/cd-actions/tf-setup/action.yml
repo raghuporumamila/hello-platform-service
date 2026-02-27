@@ -1,7 +1,7 @@
 name: 'Terraform Shared Setup'
 description: 'Authenticates with GCP and sets up Terraform'
 
-# 1. Define inputs so the action can receive data from the main workflow
+# Inputs create a bridge to pass repository variables into this action
 inputs:
   wif_provider:
     description: 'The Workload Identity Provider string'
@@ -13,10 +13,16 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Fixes the "Unreadable module directory" error by providing the symlink target
+    - name: Checkout Common Repo
+      uses: actions/checkout@v4
+      with:
+        repository: raghuporumamila/hello-platform-terraform
+        path: terraform/hello-platform-terraform
+
     - name: Google Auth
       uses: 'google-github-actions/auth@v2'
       with:
-        # 2. Reference the inputs instead of vars
         workload_identity_provider: ${{ inputs.wif_provider }}
         service_account: ${{ inputs.service_account }}
 
