@@ -3,8 +3,7 @@ name: Platform Delivery Pipeline
 on:
   workflow_run:
     workflows: ["Hello Platform Service CI"]
-    types:
-      - completed
+    types: [completed]
 
 jobs:
   setup:
@@ -13,22 +12,16 @@ jobs:
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
-      project_id: ${{ steps.set_env.outputs.project_id }}
     steps:
       - id: set_env
         run: |
-          # Use head_branch to see what branch actually ran the CI
           BRANCH="${{ github.event.workflow_run.head_branch }}"
-          echo "CI was triggered by branch: $BRANCH"
-          
           if [[ "$BRANCH" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/prod" >> $GITHUB_OUTPUT
-            echo "project_id=${{ secrets.GCP_PROJECT_ID_PROD }}" >> $GITHUB_OUTPUT
           else
             echo "env_name=dev" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
-            echo "project_id=${{ secrets.GCP_PROJECT_ID_DEV }}" >> $GITHUB_OUTPUT
           fi
 
   validate:
@@ -39,29 +32,8 @@ jobs:
       contents: 'read'
       id-token: 'write'
     steps:
-      - name: Checkout Project Repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
-
-      - name: Checkout Common Repo
-        uses: actions/checkout@v4
-        with:
-          repository: raghuporumamila/hello-platform-terraform
-          path: terraform/hello-platform-terraform
-
-      # ADD THIS STEP BEFORE TERRAFORM INIT
-      - name: Google Auth
-        uses: 'google-github-actions/auth@v2'
-        with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.CD_SA_EMAIL }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-
+      - name: Common Setup
+        uses: ./.github/workflows/cd-actions/tf-setup
       - name: Terraform Validate
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
@@ -72,43 +44,18 @@ jobs:
     needs: [ setup, validate ]
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.env_name }}
-
-    env:
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
-      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
-      CD_SERVICE_ACCOUNT: ${{ vars.CD_SA_EMAIL }}
-      REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
-
     permissions:
       contents: 'read'
       id-token: 'write'
-
     steps:
-      - name: Checkout Project Repo
-        uses: actions/checkout@v4
-
-      - name: Checkout Common Repo
-        uses: actions/checkout@v4
-        with:
-          repository: raghuporumamila/hello-platform-terraform
-          path: terraform/hello-platform-terraform
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-
-      - name: Google Auth
-        uses: 'google-github-actions/auth@v2'
-        with:
-          workload_identity_provider: ${{ env.WIF_PROVIDER }}
-          service_account: ${{ env.CD_SERVICE_ACCOUNT }}
+      - name: Common Setup
+        uses: ./.github/workflows/cd-actions/tf-setup
 
       - name: Terraform Apply
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
           terraform init
           terraform apply -auto-approve \
-            -var="project_id=${{ env.GCP_PROJECT }}" \
-            -var="image_url=${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/hello-platform-service" \
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/hello-platform-service" \
             -var="commit_sha=${{ github.event.workflow_run.head_sha }}"
