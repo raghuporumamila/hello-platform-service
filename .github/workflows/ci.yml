@@ -71,7 +71,7 @@ jobs:
         id: project_version
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "app_version=$VERSION" > app_version.txt
+          echo "$VERSION" > app_version.txt
           echo "app_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload Version Artifact
