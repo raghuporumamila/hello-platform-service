@@ -21,6 +21,9 @@ public class HelloController {
         return Map.of("commit_sha", commitSha);
     }
 
+
+
+
     @GetMapping("/health")
     public Map<String, String> healthCheck() {
         return Map.of("status", "OK");
