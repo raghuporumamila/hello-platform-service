@@ -2,6 +2,8 @@
 FROM eclipse-temurin:17-jdk-jammy AS build
 WORKDIR /app
 
+ARG APP_VERSION
+
 # Copy maven executable and pom
 COPY .mvn/ .mvn
 COPY mvnw pom.xml ./
