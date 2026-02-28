@@ -20,7 +20,7 @@ jobs:
       REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
       IMAGE_NAME: ${{ vars.IMAGE_NAME }}
       # Full registry path for consistency
-      FULL_IMAGE_PATH: ${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}
+      FULL_IMAGE_PATH: ${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}
 
     steps:
       - name: Checkout Code
