@@ -10,6 +10,7 @@ module "platform_app" {
   project_id      = var.project_id
   region          = var.region
   container_image = var.image_url
+  service_name    = var.service_name
   commit_sha      = var.commit_sha
   is_public       = true
 }
