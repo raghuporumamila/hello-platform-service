@@ -12,6 +12,7 @@ jobs:
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
+      app_version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Download Version Artifact
         uses: actions/download-artifact@v4
