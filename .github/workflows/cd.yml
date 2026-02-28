@@ -1,5 +1,9 @@
 name: Platform Delivery Pipeline
 
+concurrency:
+  group: terraform-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
 on:
   workflow_run:
     workflows: ["Hello Platform Service CI"]
@@ -7,7 +11,9 @@ on:
 
 jobs:
   setup:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >
+      github.event.workflow_run.conclusion == 'success' && 
+      github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
@@ -37,38 +43,8 @@ jobs:
             echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
           fi
 
-  validate:
-    needs: setup
-    runs-on: ubuntu-latest
-    environment: ${{ needs.setup.outputs.env_name }}
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-      # Step 1: Checkout the main repo so GitHub can find the local action
-      - name: Checkout to access local action
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
-
-      # Step 2: Run the local action and pass the necessary GCP variables
-      - name: Common Setup
-        uses: ./.github/workflows/cd-actions/tf-setup
-        with:
-          wif_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.CD_SA_EMAIL }}
-
-      - name: Terraform Validate
-        run: |
-          cd ${{ needs.setup.outputs.tf_dir }}
-          terraform init \
-            -var="env=${{ needs.setup.outputs.env_name }}" \
-            -backend-config="bucket=hello-platform-terraform-${{ needs.setup.outputs.env_name }}" \
-            -backend-config="prefix=env/${{ needs.setup.outputs.env_name }}"
-          terraform validate
-
   deploy:
-    needs: [ setup, validate ]
+    needs: [ setup ]
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.env_name }}
     permissions:
@@ -96,5 +72,6 @@ jobs:
           terraform apply -auto-approve \
             -var="env=${{ needs.setup.outputs.env_name }}" \
             -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/hello-platform-service:${{ needs.setup.outputs.app_version }}" \
+            -var="service_name=${{ vars.SERVICE_NAME }}" \
+            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.SERVICE_NAME }}:${{ needs.setup.outputs.app_version }}" \
             -var="commit_sha=${{ github.event.workflow_run.head_sha }}"
