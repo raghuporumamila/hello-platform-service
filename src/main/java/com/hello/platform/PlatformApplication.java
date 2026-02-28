@@ -40,6 +40,6 @@ public final class PlatformApplication {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         LOGGER.info("Platform service started successfully. "
-                + "Graceful shutdown enabled.");
+                + "Graceful shutdown enabled1.");
     }
 }
