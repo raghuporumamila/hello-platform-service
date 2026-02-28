@@ -3,7 +3,7 @@ name: Hello Platform Service CI
 on:
   pull_request:
     branches: [ develop, main ]
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened]
   push:
     branches: [ develop, main]
 
