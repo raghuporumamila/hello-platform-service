@@ -65,11 +65,7 @@ jobs:
             -var="env=${{ needs.setup.outputs.env_name }}" \
             -backend-config="bucket=hello-platform-terraform-${{ needs.setup.outputs.env_name }}" \
             -backend-config="prefix=env/${{ needs.setup.outputs.env_name }}"
-          terraform validate \
-            -var="env=${{ needs.setup.outputs.env_name }}" \
-            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/hello-platform-service:${{ needs.setup.outputs.app_version }}" \
-            -var="commit_sha=${{ github.event.workflow_run.head_sha }}"
+          terraform validate
 
   deploy:
     needs: [ setup, validate ]
