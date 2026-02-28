@@ -1,0 +1,6 @@
+# False positive: vulnerable code (minizip) is not present in zlib1g binary
+CVE-2023-45853
+# Low risk: JVM-managed memory prevents control of glibc memalign parameters
+CVE-2026-0861
+# Low risk: App does not perform font rendering
+CVE-2023-25193

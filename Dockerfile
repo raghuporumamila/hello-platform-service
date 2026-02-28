@@ -14,7 +14,7 @@ RUN ./mvnw clean package -DskipTests
 
 # Stage 2: Runtime
 # Using Google's Distroless for a minimal, non-root, secure base
-FROM gcr.io/distroless/java17-debian11:nonroot
+FROM gcr.io/distroless/java17-debian12:nonroot
 WORKDIR /app
 
 # Metadata labels
@@ -27,6 +27,9 @@ COPY --from=build /app/target/*.jar app.jar
 # Environment defaults
 ENV PORT=8080
 ENV APP_COMMIT_SHA=${COMMIT_SHA}
+
+ARG APP_VERSION
+ENV VERSION=${APP_VERSION}
 
 USER nonroot
 EXPOSE 8080
