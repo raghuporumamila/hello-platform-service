@@ -71,7 +71,7 @@ jobs:
         id: project_version
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "APP_VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted Version: $VERSION"
 
       - name: Build and Push to Artifact Registry

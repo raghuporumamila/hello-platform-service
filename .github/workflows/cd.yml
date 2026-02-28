@@ -13,6 +13,10 @@ jobs:
       env_name: ${{ steps.set_env.outputs.env_name }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
     steps:
+      - id: get_version
+        run: |
+          # This pulls the 'app_version' output from the CI workflow that triggered this
+          echo "version=${{ github.event.workflow_run.outputs.app_version }}" >> $GITHUB_OUTPUT
       - id: set_env
         run: |
           BRANCH="${{ github.event.workflow_run.head_branch }}"
@@ -76,5 +80,5 @@ jobs:
           terraform init
           terraform apply -auto-approve \
             -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/hello-platform-service" \
+            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/hello-platform-service:${{ needs.setup.outputs.app_version }}" \
             -var="commit_sha=${{ github.event.workflow_run.head_sha }}"
