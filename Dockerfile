@@ -21,15 +21,15 @@ WORKDIR /app
 LABEL maintainer="raghu.porumamilla@gmail.com"
 LABEL org.opencontainers.image.source="https://github.com/raghuporumamila/hello-platform-service"
 
+ARG APP_VERSION
+ENV VERSION=${APP_VERSION}
+
 # Copy the built artifact from the build stage
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/hello-platform-service-${APP_VERSION}.jar app.jar
 
 # Environment defaults
 ENV PORT=8080
 ENV APP_COMMIT_SHA=${COMMIT_SHA}
-
-ARG APP_VERSION
-ENV VERSION=${APP_VERSION}
 
 USER nonroot
 EXPOSE 8080
