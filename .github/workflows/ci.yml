@@ -81,7 +81,7 @@ jobs:
           push: true
           tags: |
             ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
-            ${{ env.FULL_IMAGE_PATH }}:${{ steps.project_version.outputs.app_version }} # Reference step output
+            ${{ env.FULL_IMAGE_PATH }}:${{ steps.project_version.outputs.app_version }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             APP_VERSION=${{ steps.project_version.outputs.app_version }}
