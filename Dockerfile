@@ -14,7 +14,7 @@ RUN ./mvnw clean package -DskipTests
 
 # Stage 2: Runtime
 # Using Google's Distroless for a minimal, non-root, secure base
-FROM gcr.io/distroless/java17-debian11:nonroot
+FROM gcr.io/distroless/java17-debian12:nonroot
 WORKDIR /app
 
 # Metadata labels
