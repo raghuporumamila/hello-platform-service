@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: [ develop, main ]
 
-outputs:
-  app_version: ${{ jobs.build-and-scan.outputs.app_version }}
-
 permissions:
   contents: read
   id-token: write
