@@ -1,7 +1,7 @@
 name: Platform Delivery Pipeline
 
 concurrency:
-  group: platform-delivery-pipeline-${{ github.event.workflow_run.head_branch }}
+  group: terraform-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: false
 
 on:
@@ -72,5 +72,6 @@ jobs:
           terraform apply -auto-approve \
             -var="env=${{ needs.setup.outputs.env_name }}" \
             -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/hello-platform-service:${{ needs.setup.outputs.app_version }}" \
+            -var="service_name=${{ vars.SERVICE_NAME }}" \
+            -var="image_url=${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.SERVICE_NAME }}:${{ needs.setup.outputs.app_version }}" \
             -var="commit_sha=${{ github.event.workflow_run.head_sha }}"
