@@ -48,6 +48,19 @@ jobs:
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
 
+      - name: Extract Maven Project Version
+        id: project_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "$VERSION" > app_version.txt
+          echo "app_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload Version Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-version
+          path: app_version.txt
+
       # Build and Load locally so Trivy can see it
       - name: Build Local Image
         uses: docker/build-push-action@v5
@@ -57,6 +70,7 @@ jobs:
           tags: ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
+            APP_VERSION=${{ steps.project_version.outputs.app_version }}
 
       # Requirement: Run vulnerability scan
       - name: Run Trivy Scanner
@@ -67,18 +81,6 @@ jobs:
           exit-code: '1' # Fails the build if issues are found
           severity: 'CRITICAL,HIGH'
 
-      - name: Extract Maven Project Version
-        id: project_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "app_version=$VERSION" > app_version.txt
-          echo "app_version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Upload Version Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-version
-          path: app_version.txt
 
       - name: Build and Push to Artifact Registry
         uses: docker/build-push-action@v5

@@ -14,6 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <tomcat.version>10.1.45</tomcat.version>
         <spring-framework.version>6.2.11</spring-framework.version>
+        <jackson-bom.version>2.18.6</jackson-bom.version>
     </properties>
 
     <parent>
