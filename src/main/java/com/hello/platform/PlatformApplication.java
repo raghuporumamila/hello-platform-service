@@ -11,11 +11,15 @@ import org.springframework.context.event.EventListener;
  * Main entry point for the Platform Application.
  */
 @SpringBootApplication
-public class PlatformApplication {
-    private static final Logger logger = LoggerFactory.getLogger(PlatformApplication.class);
+public final class PlatformApplication {
+    /**
+     * Logger for the application.
+     */
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(PlatformApplication.class);
 
     /**
-     * Private constructor to prevent instantiation of this utility-like class.
+     * Private constructor to prevent instantiation.
      */
     private PlatformApplication() {
         // Prevent instantiation
@@ -23,7 +27,8 @@ public class PlatformApplication {
 
     /**
      * Starts the Spring Boot application.
-     * * @param args command line arguments
+     *
+     * @param args command line arguments
      */
     public static void main(final String[] args) {
         SpringApplication.run(PlatformApplication.class, args);
@@ -31,10 +36,10 @@ public class PlatformApplication {
 
     /**
      * Log a structured message when the application is ready.
-     * Since we've configured LogstashEncoder, this will output as JSON.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        logger.info("Platform service started successfully. Graceful shutdown enabled.");
+        LOGGER.info("Platform service started successfully. "
+                + "Graceful shutdown enabled.");
     }
 }
