@@ -14,7 +14,6 @@ public class PlatformApplication {
     public static void main(String[] args) {
         SpringApplication.run(PlatformApplication.class, args);
     }
-
     /**
      * Log a structured message when the application is ready.
      * Since we've configured LogstashEncoder, this will output as JSON.
