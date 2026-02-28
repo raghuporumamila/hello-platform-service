@@ -5,4 +5,4 @@ variable "region" {
 }
 variable "image_url" { type = string }
 variable "commit_sha" { type = string }
-variable "env" {type = string}
+variable "env" { type = string }
