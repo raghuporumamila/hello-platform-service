@@ -7,11 +7,25 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 
+/**
+ * Main entry point for the Platform Application.
+ */
 @SpringBootApplication
 public class PlatformApplication {
     private static final Logger logger = LoggerFactory.getLogger(PlatformApplication.class);
 
-    public static void main(String[] args) {
+    /**
+     * Private constructor to prevent instantiation of this utility-like class.
+     */
+    private PlatformApplication() {
+        // Prevent instantiation
+    }
+
+    /**
+     * Starts the Spring Boot application.
+     * * @param args command line arguments
+     */
+    public static void main(final String[] args) {
         SpringApplication.run(PlatformApplication.class, args);
     }
 
