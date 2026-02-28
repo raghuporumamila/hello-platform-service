@@ -1,5 +1,9 @@
 name: Platform Delivery Pipeline
 
+concurrency:
+  group: terraform-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
 on:
   workflow_run:
     workflows: ["Hello Platform Service CI"]
@@ -7,7 +11,9 @@ on:
 
 jobs:
   setup:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >
+      github.event.workflow_run.conclusion == 'success' && 
+      github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
