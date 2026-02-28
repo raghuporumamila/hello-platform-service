@@ -48,25 +48,6 @@ jobs:
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
 
-      # Build and Load locally so Trivy can see it
-      - name: Build Local Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
-          build-args: |
-            COMMIT_SHA=${{ github.sha }}
-
-      # Requirement: Run vulnerability scan
-      - name: Run Trivy Scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: '${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1' # Fails the build if issues are found
-          severity: 'CRITICAL,HIGH'
-
       - name: Extract Maven Project Version
         id: project_version
         run: |
@@ -79,6 +60,27 @@ jobs:
         with:
           name: app-version
           path: app_version.txt
+
+      # Build and Load locally so Trivy can see it
+      - name: Build Local Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            APP_VERSION=${{ steps.project_version.outputs.app_version }}
+
+      # Requirement: Run vulnerability scan
+      - name: Run Trivy Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # Fails the build if issues are found
+          severity: 'CRITICAL,HIGH'
+
 
       - name: Build and Push to Artifact Registry
         uses: docker/build-push-action@v5
