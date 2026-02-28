@@ -10,18 +10,17 @@ permissions:
 
 jobs:
   build-and-scan:
-    # Dynamically select the GitHub Environment based on the target branch
     environment: ${{ github.base_ref == 'main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
 
     env:
-      # These now pull directly from the selected Environment's variables
       GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
       WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
       SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
-
       REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
       IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+      # Full registry path for consistency
+      FULL_IMAGE_PATH: ${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}
 
     steps:
       - name: Checkout Code
@@ -30,12 +29,13 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17' # Adjust to your version (11, 17, 21, etc.)
+          java-version: '17'
           distribution: 'temurin'
-          cache: 'maven' # Use 'gradle' if you use Gradle instead of Maven
+          cache: 'maven'
 
       - name: Run Unit Tests
         run: mvn clean test
+
       - name: GCP Auth (Keyless via WIF)
         uses: google-github-actions/auth@v2
         with:
@@ -48,20 +48,31 @@ jobs:
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
 
-      - name: Build Image
+      # Build and Load locally so Trivy can see it
+      - name: Build Local Image
         uses: docker/build-push-action@v5
         with:
           context: .
           load: true
-          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
 
-      #- name: Run Trivy Scanner
-      #  uses: aquasecurity/trivy-action@master
-      #  with:
-      #    image-ref: '${{ env.IMAGE_NAME }}:${{ github.sha }}'
-      #    format: 'table'
-      #    exit-code: '1'
-      #    severity: 'CRITICAL,HIGH'
+      # Requirement: Run vulnerability scan
+      - name: Run Trivy Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # Fails the build if issues are found
+          severity: 'CRITICAL,HIGH'
+
+      - name: Extract Maven Project Version
+        id: project_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted Version: $VERSION"
 
       - name: Build and Push to Artifact Registry
         uses: docker/build-push-action@v5
@@ -70,6 +81,7 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/hello-platform-artifact-registry/${{ env.IMAGE_NAME }}:${{ env.APP_VERSION }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
+            APP_VERSION=${{ env.APP_VERSION }}

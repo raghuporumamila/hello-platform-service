@@ -28,6 +28,9 @@ COPY --from=build /app/target/*.jar app.jar
 ENV PORT=8080
 ENV APP_COMMIT_SHA=${COMMIT_SHA}
 
+ARG APP_VERSION
+ENV VERSION=${APP_VERSION}
+
 USER nonroot
 EXPOSE 8080
 
