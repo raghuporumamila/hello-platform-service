@@ -1,7 +1,7 @@
 name: Platform Delivery Pipeline
 
 concurrency:
-  group: terraform-${{ github.event.workflow_run.head_branch }}
+  group: platform-delivery-pipeline-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: false
 
 on:
