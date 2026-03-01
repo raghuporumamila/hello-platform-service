@@ -13,7 +13,7 @@ jobs:
   setup:
     if: >
       github.event.workflow_run.conclusion == 'success' && 
-      github.event.workflow_run.event == 'push'
+      github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
@@ -37,10 +37,13 @@ jobs:
           BRANCH="${{ github.event.workflow_run.head_branch }}"
           if [[ "$BRANCH" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform/environments/prod" >> $GITHUB_OUTPUT
+            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == release/* ]]; then
+            echo "env_name=qa" >> $GITHUB_OUTPUT
+            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           else
             echo "env_name=dev" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform/environments/dev" >> $GITHUB_OUTPUT
+            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           fi
 
   deploy:

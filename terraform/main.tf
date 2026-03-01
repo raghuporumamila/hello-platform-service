@@ -5,7 +5,7 @@ provider "google" {
 
 # 2. Call the module
 module "platform_app" {
-  source          = "../../hello-platform-terraform/modules/cloud_run"
+  source          = "./hello-platform-terraform/modules/cloud_run"
   env             = var.env
   project_id      = var.project_id
   region          = var.region
