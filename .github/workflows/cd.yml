@@ -12,39 +12,38 @@ on:
 jobs:
   setup:
     if: >
-      github.event.workflow_run.conclusion == 'success' && 
-      github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'pull_request'
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
-      env_name: ${{ steps.set_env.outputs.env_name }}
+      env_name: ${{ steps.get_metadata.outputs.env_name }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
-      app_version: ${{ steps.get_version.outputs.version }}
+      app_version: ${{ steps.get_metadata.outputs.version }}
     steps:
       - name: Download Version Artifact
         uses: actions/download-artifact@v4
         with:
-          name: app-version
+          name: pipeline-metadata
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
-      - id: get_version
+      - id: get_metadata
         run: |
           VERSION=$(cat app_version.txt)
+          ENV_NAME=$(cat env_name.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
 
       - id: set_env
         run: |
           BRANCH="${{ github.event.workflow_run.head_branch }}"
           if [[ "$BRANCH" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == release/* ]]; then
             echo "env_name=qa" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           else
             echo "env_name=dev" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           fi
+          echo "tf_dir=terraform" >> $GITHUB_OUTPUT
 
   deploy:
     needs: [ setup ]

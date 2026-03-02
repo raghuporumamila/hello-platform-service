@@ -2,12 +2,13 @@ name: Hello Platform Service CI
 
 on:
   pull_request:
-    branches: [ develop, main ]
-    types: [opened, reopened]
+    branches: [ develop, "release/*", main ]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
   id-token: write
+
 
 jobs:
   setup:
@@ -15,6 +16,7 @@ jobs:
     outputs:
       env_name: ${{ steps.set_env.outputs.env_name }}
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
+      app_version: ${{ steps.project_version.outputs.app_version }}
     steps:
       - id: set_env
         run: |
@@ -31,6 +33,30 @@ jobs:
             echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           fi
 
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Extract Maven Version
+        id: project_version
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "app_version=$VERSION" >> $GITHUB_OUTPUT
+          # Create files for the CD pipeline to consume
+          echo "$VERSION" > app_version.txt
+          echo "${{ steps.set_env.outputs.env_name }}" > env_name.txt
+
+      - name: Upload Metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-metadata
+          path: |
+            app_version.txt
+            env_name.txt
   validate:
     needs: [ setup ]
     runs-on: ubuntu-latest
@@ -63,6 +89,7 @@ jobs:
 
   build-and-scan:
     needs: [ setup, validate ]
+    if: github.base_ref != 'main' && github.ref_name != 'main'
     environment: ${{ needs.setup.outputs.env_name }}
     runs-on: ubuntu-latest
 
@@ -104,19 +131,6 @@ jobs:
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
 
-      - name: Extract Maven Project Version
-        id: project_version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "$VERSION" > app_version.txt
-          echo "app_version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Upload Version Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-version
-          path: app_version.txt
-
       # Build and Load locally so Trivy can see it
       - name: Build Local Image
         uses: docker/build-push-action@v5
@@ -126,7 +140,7 @@ jobs:
           tags: ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
-            APP_VERSION=${{ steps.project_version.outputs.app_version }}
+            APP_VERSION=${{ needs.setup.outputs.app_version }}
 
       # Requirement: Run vulnerability scan
       - name: Run Trivy Scanner
@@ -146,7 +160,15 @@ jobs:
           push: true
           tags: |
             ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
-            ${{ env.FULL_IMAGE_PATH }}:${{ steps.project_version.outputs.app_version }}
+            ${{ env.FULL_IMAGE_PATH }}:${{ needs.setup.outputs.app_version }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
-            APP_VERSION=${{ steps.project_version.outputs.app_version }}
+            APP_VERSION=${{ needs.setup.outputs.app_version }}
+
+    # New job to handle versioning when we skip the full build
+  promote-metadata:
+    needs: [ setup ]
+    if: github.base_ref == 'main' || github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Promoting version ${{ needs.setup.outputs.app_version }} to Production"
