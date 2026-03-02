@@ -176,7 +176,7 @@ jobs:
             APP_VERSION=${{ needs.setup.outputs.app_version }}
 
   get-qa-metadata:
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     environment: qa # This gives us access to QA's vars.GCP_PROJECT_ID
     outputs:
@@ -187,7 +187,7 @@ jobs:
     # New job to handle versioning when we skip the full build
   promote-metadata:
     needs: [ setup, get-qa-metadata ]
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     environment: prod
     permissions:
