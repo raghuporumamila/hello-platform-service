@@ -7,3 +7,4 @@ variable "image_url" { type = string }
 variable "commit_sha" { type = string }
 variable "env" { type = string }
 variable "service_name" { type = string }
+variable "deletion_protection" {type = bool}

@@ -13,6 +13,7 @@ module "platform_app" {
   service_name    = var.service_name
   commit_sha      = var.commit_sha
   is_public       = true
+  deletion_protection = false
 }
 
 output "service_url" {
