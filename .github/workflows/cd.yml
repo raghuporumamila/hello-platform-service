@@ -9,6 +9,7 @@ on:
     workflows: ["Hello Platform Service CI"]
     types: [completed]
 
+
 jobs:
   setup:
     if: >
