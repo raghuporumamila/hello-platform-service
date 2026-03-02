@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.get_metadata.outputs.env_name }}
-      tf_dir: ${{ steps.set_env.outputs.tf_dir }}
+      tf_dir: terraform
       app_version: ${{ steps.get_metadata.outputs.version }}
     steps:
       - name: Download Version Artifact
@@ -32,7 +32,6 @@ jobs:
           ENV_NAME=$(cat env_name.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
-          echo "tf_dir=terraform" >> $GITHUB_OUTPUT
 
   deploy:
     needs: [ setup ]
@@ -53,9 +52,17 @@ jobs:
           wif_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.CD_SA_EMAIL }}
 
+      - name: Debug Branch Info
+        run: |
+          echo "Triggering Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Triggering SHA: ${{ github.event.workflow_run.head_sha }}"
+          git branch --show-current
+          ls -R terraform/
+
       - name: Terraform Apply
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
+          ls -la
           terraform init \
             -var="env=${{ needs.setup.outputs.env_name }}" \
             -backend-config="bucket=hello-platform-terraform-${{ needs.setup.outputs.env_name }}" \
