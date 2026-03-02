@@ -9,7 +9,6 @@ permissions:
   contents: read
   id-token: write
 
-
 jobs:
   setup:
     runs-on: ubuntu-latest
