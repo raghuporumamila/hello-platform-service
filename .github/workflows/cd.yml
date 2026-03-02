@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.get_metadata.outputs.env_name }}
-      tf_dir: ${{ steps.set_env.outputs.tf_dir }}
+      tf_dir: ${{ steps.get_metadata.outputs.tf_dir }}
       app_version: ${{ steps.get_metadata.outputs.version }}
     steps:
       - name: Download Version Artifact
