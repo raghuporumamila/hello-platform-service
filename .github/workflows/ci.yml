@@ -179,6 +179,7 @@ jobs:
     steps:
       - run: echo "Fetching QA Project ID for promotion..."
 
+
     # New job to handle versioning when we skip the full build
   promote-metadata:
     needs: [ setup, get-qa-metadata ]
