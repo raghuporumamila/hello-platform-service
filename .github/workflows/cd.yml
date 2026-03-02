@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       env_name: ${{ steps.get_metadata.outputs.env_name }}
-      tf_dir: ${{ steps.get_metadata.outputs.tf_dir }}
+      tf_dir: terraform
       app_version: ${{ steps.get_metadata.outputs.version }}
     steps:
       - name: Download Version Artifact
@@ -32,7 +32,6 @@ jobs:
           ENV_NAME=$(cat env_name.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
-          echo "tf_dir=terraform" >> $GITHUB_OUTPUT
 
   deploy:
     needs: [ setup ]
