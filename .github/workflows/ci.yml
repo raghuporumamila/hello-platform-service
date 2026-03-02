@@ -30,17 +30,17 @@ jobs:
           fi
       - id: set_env
         run: |
-          # Use base_ref for PRs, or ref for direct pushes (merges)
-          BRANCH="${{ github.base_ref || github.ref_name }}"
-          if [[ "$BRANCH" == "main" ]]; then
-            echo "env_name=prod" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH" == release/* ]]; then
-            echo "env_name=qa" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
+          # Only use 'prod' if we are actually ON the main branch (push/merge)
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+          echo "env_name=prod" >> $GITHUB_OUTPUT
+          echo "tf_dir=terraform" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.base_ref }}" == "main" || "${{ github.ref_name }}" == release/* ]]; then
+          # PRs targeting main or pushes to release branches use QA
+          echo "env_name=qa" >> $GITHUB_OUTPUT
+          echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           else
-            echo "env_name=dev" >> $GITHUB_OUTPUT
-            echo "tf_dir=terraform" >> $GITHUB_OUTPUT
+          echo "env_name=dev" >> $GITHUB_OUTPUT
+          echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout Code
