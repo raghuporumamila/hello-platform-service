@@ -205,7 +205,14 @@ jobs:
           SOURCE_IMAGE="${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ needs.get-qa-metadata.outputs.qa_project_id }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}:${{ needs.setup.outputs.app_version }}"
           DEST_IMAGE="${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}:${{ needs.setup.outputs.app_version }}"
           
-          echo "Promoting $SOURCE_IMAGE to $DEST_IMAGE"
+          # Standardize the auth for both registries
+          gcloud auth configure-docker ${{ vars.REGISTRY_REGION }}-docker.pkg.dev --quiet
           
-          # Use gcloud to copy the image directly between registries
-          gcloud container images add-tag "$SOURCE_IMAGE" "$DEST_IMAGE" --quiet
+          echo "Pulling from QA..."
+          docker pull "$SOURCE_IMAGE"
+          
+          echo "Tagging for Prod..."
+          docker tag "$SOURCE_IMAGE" "$DEST_IMAGE"
+          
+          echo "Pushing to Prod..."
+          docker push "$DEST_IMAGE"
