@@ -32,17 +32,6 @@ jobs:
           ENV_NAME=$(cat env_name.txt)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
-
-      - id: set_env
-        run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          if [[ "$BRANCH" == "main" ]]; then
-            echo "env_name=prod" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH" == release/* ]]; then
-            echo "env_name=qa" >> $GITHUB_OUTPUT
-          else
-            echo "env_name=dev" >> $GITHUB_OUTPUT
-          fi
           echo "tf_dir=terraform" >> $GITHUB_OUTPUT
 
   deploy:
@@ -56,7 +45,7 @@ jobs:
       - name: Checkout to access local action
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup

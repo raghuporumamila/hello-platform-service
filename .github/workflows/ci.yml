@@ -169,10 +169,42 @@ jobs:
             COMMIT_SHA=${{ github.sha }}
             APP_VERSION=${{ needs.setup.outputs.app_version }}
 
+  get-qa-metadata:
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    environment: qa # This gives us access to QA's vars.GCP_PROJECT_ID
+    outputs:
+      qa_project_id: ${{ vars.GCP_PROJECT_ID }}
+    steps:
+      - run: echo "Fetching QA Project ID for promotion..."
+
     # New job to handle versioning when we skip the full build
   promote-metadata:
-    needs: [ setup ]
-    if: github.base_ref == 'main' || github.ref_name == 'main'
+    needs: [ setup, get-qa-metadata ]
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
-      - run: echo "Promoting version ${{ needs.setup.outputs.app_version }} to Production"
+      - name: GCP Auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Copy Image from QA to Prod
+        run: |
+          # Define source (QA) and destination (Prod)
+          # Note: You may need to hardcode the QA project ID or use a specific secret if it differs from the Prod context
+          SOURCE_IMAGE="${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ needs.get-qa-metadata.outputs.qa_project_id }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}:${{ needs.setup.outputs.app_version }}"
+          DEST_IMAGE="${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}:${{ needs.setup.outputs.app_version }}"
+          
+          echo "Promoting $SOURCE_IMAGE to $DEST_IMAGE"
+          
+          # Use gcloud to copy the image directly between registries
+          gcloud artifacts docker images copy "$SOURCE_IMAGE" "$DEST_IMAGE" --quiet
