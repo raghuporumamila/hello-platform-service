@@ -55,6 +55,7 @@ jobs:
       - name: Terraform Apply
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
+          ls -la
           terraform init \
             -var="env=${{ needs.setup.outputs.env_name }}" \
             -backend-config="bucket=hello-platform-terraform-${{ needs.setup.outputs.env_name }}" \
