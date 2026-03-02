@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - 'release/**'
-      - 'main'
   pull_request:
-    branches: [ develop, "release/*", main ]
+    branches: [ develop, main ]
     types: [opened, reopened, synchronize]
 
 permissions:
