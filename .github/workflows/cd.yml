@@ -44,13 +44,20 @@ jobs:
       - name: Checkout to access local action
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup
         with:
           wif_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.CD_SA_EMAIL }}
+
+      - name: Debug Branch Info
+        run: |
+          echo "Triggering Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Triggering SHA: ${{ github.event.workflow_run.head_sha }}"
+          git branch --show-current
+          ls -R terraform/
 
       - name: Terraform Apply
         run: |
