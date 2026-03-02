@@ -21,6 +21,13 @@ jobs:
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
       app_version: ${{ steps.project_version.outputs.app_version }}
     steps:
+      - name: Check Source Branch for Main Merge
+        if: github.base_ref == 'main'
+        run: |
+          if [[ ! "${{ github.head_ref }}" =~ ^release/ ]] || [[ "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "ERROR: Merges to main are ONLY allowed from release/** branches or version tags (v*)."
+            exit 1
+          fi
       - id: set_env
         run: |
           # Use base_ref for PRs, or ref for direct pushes (merges)
