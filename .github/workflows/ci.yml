@@ -155,7 +155,9 @@ jobs:
 
 
       - name: Build and Push to Artifact Registry
-        if: github.event_name == 'pull_request'
+        if: >-
+          (github.event_name == 'pull_request' && github.base_ref == 'develop') || 
+          (github.event_name == 'push' && startsWith(github.ref_name, 'release/'))
         uses: docker/build-push-action@v5
         with:
           context: .
