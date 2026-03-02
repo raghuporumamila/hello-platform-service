@@ -44,7 +44,7 @@ jobs:
       - name: Checkout to access local action
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Common Setup
         uses: ./.github/workflows/cd-actions/tf-setup
