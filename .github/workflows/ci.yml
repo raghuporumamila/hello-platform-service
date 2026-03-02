@@ -1,6 +1,9 @@
 name: Hello Platform Service CI
 
 on:
+  push:
+    branches:
+      - 'release/**'
   pull_request:
     branches: [ develop, "release/*", main ]
     types: [opened, reopened, synchronize]
