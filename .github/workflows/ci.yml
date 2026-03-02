@@ -1,9 +1,6 @@
 name: Hello Platform Service CI
 
 on:
-  push:
-    branches:
-      - 'release/**'
   pull_request:
     branches: [ develop, main ]
     types: [opened, reopened, synchronize]
@@ -66,7 +63,6 @@ jobs:
             env_name.txt
   validate:
     needs: [ setup ]
-    if: github.base_ref != 'main' && github.ref_name != 'main'
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.env_name }}
     permissions:
@@ -97,7 +93,6 @@ jobs:
 
   build-and-scan:
     needs: [ setup, validate ]
-    if: github.base_ref != 'main' && github.ref_name != 'main'
     environment: ${{ needs.setup.outputs.env_name }}
     runs-on: ubuntu-latest
 
@@ -187,7 +182,7 @@ jobs:
     # New job to handle versioning when we skip the full build
   promote-metadata:
     needs: [ setup, get-qa-metadata ]
-    if: github.ref_name == 'main' || github.base_ref == 'main'
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     environment: prod
     permissions:
