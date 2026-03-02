@@ -59,6 +59,7 @@ jobs:
           git branch --show-current
           ls -R terraform/
 
+
       - name: Terraform Apply
         run: |
           cd ${{ needs.setup.outputs.tf_dir }}
