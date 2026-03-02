@@ -30,6 +30,7 @@ jobs:
           fi
       - id: set_env
         run: |
+          # Use base_ref for PRs, or ref for direct pushes (merges)
           # Only use 'prod' if we are actually ON the main branch (push/merge)
           if [[ "${{ github.ref_name }}" == "main" ]]; then
           echo "env_name=prod" >> $GITHUB_OUTPUT
