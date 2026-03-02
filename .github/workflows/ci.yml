@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - 'release/**'
-      - 'main'
   pull_request:
-    branches: [ develop, "release/*", main ]
+    branches: [ develop, main ]
     types: [opened, reopened, synchronize]
 
 permissions:
@@ -21,14 +20,19 @@ jobs:
       tf_dir: ${{ steps.set_env.outputs.tf_dir }}
       app_version: ${{ steps.project_version.outputs.app_version }}
     steps:
+      - name: Check Source Branch for Main Merge
+        if: github.base_ref == 'main'
+        run: |
+          if [[ ! "${{ github.head_ref }}" =~ ^release/ ]] || [[ "$SOURCE_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "ERROR: Merges to main are ONLY allowed from release/** branches or version tags (v*)."
+            exit 1
+          fi
       - id: set_env
         run: |
-          # Use base_ref for PRs, or ref for direct pushes (merges)
-          BRANCH="${{ github.base_ref || github.ref_name }}"
-          if [[ "$BRANCH" == "main" ]]; then
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.base_ref }}" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform" >> $GITHUB_OUTPUT
-          elif [[ "$BRANCH" == release/* ]]; then
+          elif [[ "${{ github.ref_name }}" == release/* ]]; then
             echo "env_name=qa" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           else
@@ -62,6 +66,7 @@ jobs:
             env_name.txt
   validate:
     needs: [ setup ]
+    if: github.base_ref != 'main' && github.ref_name != 'main'
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.env_name }}
     permissions:
@@ -171,7 +176,7 @@ jobs:
             APP_VERSION=${{ needs.setup.outputs.app_version }}
 
   get-qa-metadata:
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     environment: qa # This gives us access to QA's vars.GCP_PROJECT_ID
     outputs:
@@ -182,7 +187,7 @@ jobs:
     # New job to handle versioning when we skip the full build
   promote-metadata:
     needs: [ setup, get-qa-metadata ]
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     environment: prod
     permissions:
