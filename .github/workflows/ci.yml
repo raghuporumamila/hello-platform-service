@@ -208,4 +208,4 @@ jobs:
           echo "Promoting $SOURCE_IMAGE to $DEST_IMAGE"
           
           # Use gcloud to copy the image directly between registries
-          gcloud artifacts docker images copy "$SOURCE_IMAGE" "$DEST_IMAGE" --quiet
+          gcloud container images add-tag "$SOURCE_IMAGE" "$DEST_IMAGE" --quiet
