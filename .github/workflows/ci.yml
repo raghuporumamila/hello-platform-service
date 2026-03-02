@@ -29,7 +29,7 @@ jobs:
           if [[ "${{ github.ref_name }}" == "main" || "${{ github.base_ref }}" == "main" ]]; then
             echo "env_name=prod" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == release/* ]]; then
+          elif [[ "${{ github.ref_name }}" == release/* || "${{ github.base_ref }}" == release/* ]]; then
             echo "env_name=qa" >> $GITHUB_OUTPUT
             echo "tf_dir=terraform" >> $GITHUB_OUTPUT
           else
