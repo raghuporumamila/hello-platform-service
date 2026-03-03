@@ -61,7 +61,8 @@ jobs:
           path: |
             app_version.txt
             env_name.txt
-  validate:
+
+  terraform-validate:
     needs: [ setup ]
     runs-on: ubuntu-latest
     environment: qa
@@ -91,8 +92,8 @@ jobs:
           terraform init -backend=false
           terraform validate
 
-  build-and-scan:
-    needs: [ setup, validate ]
+  build-scan-and-promote-to-registry:
+    needs: [ setup, terraform-validate ]
     environment: ${{ needs.setup.outputs.env_name }}
     runs-on: ubuntu-latest
 
@@ -181,7 +182,7 @@ jobs:
 
 
     # New job to handle versioning when we skip the full build
-  promote-metadata:
+  promote-container-to-prod-registry:
     needs: [ setup, get-qa-metadata ]
     if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
