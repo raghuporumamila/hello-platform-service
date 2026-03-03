@@ -15,6 +15,7 @@ A production-grade Spring Boot 3 REST service with a full CI/CD pipeline deployi
 8. GCP workload identity federation setup
 9. Security and vulnerability scanning
 10. Running locally
+11. Production Readiness Reflection
 
 
 ---
@@ -121,7 +122,7 @@ Variables are declared in variables.tf. The region defaults to us-east1. All oth
 
 The CI pipeline is defined in .github/workflows/ci.yml and is named "Hello Platform Service CI". It triggers on pull requests to the develop, main, and release/** branches when they are opened, reopened, or synchronized.
 
-The pipeline has five jobs: setup, validate, build-and-scan, get-qa-metadata, and promote-metadata.
+The pipeline has five jobs: setup, validate-terraform, build-scan-and-promote-to-registry, get-qa-metadata, and promote-container-to-prod-registry.
 
 
 ### setup job
@@ -168,7 +169,7 @@ Steps:
 The push step is conditional. It only pushes on PRs targeting develop. PRs targeting release/* or main do not push new images — they either use the validate-only flow or the promote flow described below.
 
 
-### get-qa-metadata and promote-metadata jobs
+### get-qa-metadata and promote-container-to-prod-registry jobs
 
 These jobs only run when the PR is targeting main (i.e., a release branch is being merged to main for a production deployment).
 
@@ -286,7 +287,7 @@ The WIF_PROVIDER and SA_EMAIL (or CD_SA_EMAIL for the CD pipeline) values are st
 
 ## 9. Security and vulnerability scanning
 
-Trivy runs on every PR as part of the build-and-scan job. It scans the locally built Docker image for CRITICAL and HIGH severity CVEs before any image is pushed to a registry. If vulnerabilities are found the build fails and the image is not pushed.
+Trivy runs on every PR as part of the build-scan-and-promote-to-registry job. It scans the locally built Docker image for CRITICAL and HIGH severity CVEs before any image is pushed to a registry. If vulnerabilities are found the build fails and the image is not pushed.
 
 The .trivyignore file suppresses three CVEs that have been reviewed and determined to be false positives or not applicable:
 
@@ -345,3 +346,33 @@ Run checkstyle only:
 ```
 ./mvnw checkstyle:check
 ```
+## 11. Production Readiness Reflection
+### What are the biggest risks in this architecture?
+Manual Back-merges: While the strategy ensures release/* goes to main, there is no automated mechanism in the YAML to ensure main is merged back into develop after a production deployment.
+### How would you monitor this service in production?
+Cloud Logging: The application already uses logback-spring.xml and logstash-logback-encoder to emit structured JSON logs. These are automatically indexed by Google Cloud Logging for searching and alerting.
+
+Health Checks: The service exposes a /health endpoint and Spring Boot Actuator endpoints. Cloud Run uses these for liveness and readiness probes to determine if a container should be restarted.
+
+Cloud Monitoring: Integration with GCP's operations suite (formerly Stackdriver) can be used to visualize the metrics exported by the Actuator.
+
+### How would you handle rollback?
+Cloud Run Revisions: Since every deployment creates a new immutable revision in Cloud Run, a rollback is performed by shifting traffic back to the previous known-good revision via the GCP Console or CLI.
+
+Pipeline Re-run: You can re-run a previous successful "Platform Delivery Pipeline" workflow in GitHub Actions. Since it uses the app_version and head_sha from the original run, it will re-deploy the exact same image and Terraform state.
+
+Terraform Revert: If the infrastructure itself changed, you would revert the Git commit and allow the CD pipeline to re-apply the previous configuration.
+
+### What would change if this handled sensitive data (PII)?
+Encryption: You would likely implement Cloud KMS (Key Management Service) for application-level encryption of sensitive fields before they reach the database.
+
+Data Masking: The JSON logging configuration in logback-spring.xml would need filters(i.e., something like PatternMaskingLayout) to ensure PII is never written to stdout.
+
+### How would you secure the service if deployed in public cloud and required to be
+
+exposed externally?
+Cloud Armor (WAF): Deploy Google Cloud Armor in front of your Cloud Run service to protect against OWASP Top 10 risks (SQL injection, Cross-Site Scripting) and filter traffic based on Geo-location or IP reputation.
+
+External HTTP(S) Load Balancer: Instead of using the default Cloud Run URL, use a Global External Load Balancer. This allows you to terminate SSL/TLS at the edge and attach security policies.
+
+Identity-Aware Proxy (IAP): If the service is intended for employees or partners rather than the general public, enable IAP to require a verified identity (OIDC) before any traffic even reaches your container.
