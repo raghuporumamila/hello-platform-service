@@ -15,7 +15,8 @@ A production-grade Spring Boot 3 REST service with a full CI/CD pipeline deployi
 8. GCP workload identity federation setup
 9. Security and vulnerability scanning
 10. Running locally
-11. Production Readiness Reflection
+11. Branching Strategy & CI/CD Design
+12. Production Readiness Reflection
 
 
 ---
@@ -346,31 +347,79 @@ Run checkstyle only:
 ```
 ./mvnw checkstyle:check
 ```
-## 11. Production Readiness Reflection
-### What are the biggest risks in this architecture?
+
+## 11. Branching Strategy & CI/CD Design
+
+### 1. Branching Model
+The project utilizes a **Environment-Branching** model. It relies on specific branch patterns to trigger environment-specific logic:
+* **`develop`**: The primary integration branch for ongoing feature development.
+* **`release/**`**: Dedicated branches for stabilization and QA testing.
+* **`main`**: The production branch, representing the stable, deployed state of the application.
+
+### 2. Rationale
+This model was chosen to enforce **strict environment isolation**. By mapping branches to specific GCP environments (Dev, QA, Prod), the team ensures that infrastructure changes and application code are validated in lower environments before reaching production. This minimizes the risk of "breaking" production with untested Terraform or container configurations.
+
+### 3. Pipeline Response by Branch
+The CI/CD pipeline dynamically adapts its behavior based on the branch context:
+
+| Triggering Branch | Target Environment | Key Actions                                                                                           |
+| :--- | :--- |:------------------------------------------------------------------------------------------------------|
+| **`develop`** | `dev` | Runs Maven tests, Checkstyle, Trivy vulnerability scans, and pushes a build to the Dev registry.      |
+| **`release/**`** | `qa` | Same as above, except this pushes to QA Registry.                                                     |
+| **`main`** | `prod` | Skips the build/test phase to promote the existing, verified QA container image to the Prod registry. |
+
+
+
+### 4. Build Promotion
+Builds are promoted through **Container Image Promotion** rather than rebuilding from source:
+1.  **Artifact Creation**: Images are built and tagged with the git SHA and Maven version during the `develop` or `release` phases.
+2.  **Promotion to Prod**: When merging to `main`, the `promote-container-to-prod-registry` job pulls the verified image from the QA registry and pushes it to the Prod registry. This guarantees that the exact binary tested in QA is what runs in Production.
+
+### 5. Scaling for 10–20 Engineers
+The design includes several features to handle a growing team:
+* **Concurrency Management**: The CD pipeline uses a `concurrency` group tied to the branch name (`terraform-${{ github.event.workflow_run.head_branch }}`) to prevent multiple engineers from corrupting the Terraform state during simultaneous deploys.
+* **Decoupled Metadata**: By passing version information via `pipeline-metadata` artifacts, the system maintains a consistent "source of truth" even as many concurrent builds occur.
+
+### 6. Accidental Deployment Prevention
+Safety is built into the workflow at multiple levels:
+* **Branch Gatekeeping**: A pre-check script in the `setup` job explicitly blocks merges to `main` unless they originate from a `release/**` branch.
+* **Environment Gates**: The pipeline uses GitHub Environments (e.g., `environment: prod`), allowing for manual approval requirements to be set in the GitHub UI.
+* **Security Scans**: The Trivy scanner is configured to fail the build (`exit-code: '1'`) if any `CRITICAL` or `HIGH` vulnerabilities are detected.
+
+### 7. Risks
+* **Merge Complexity**: Long-lived `release` branches can lead to difficult merges back into `develop` if not managed frequently.
+* **Trigger Latency**: Because the CD pipeline (`cd.yml`) triggers on `workflow_run` completion, there is a minor delay between the CI finishing and the deployment starting.
+
+### 8. Hotfix Handling
+In this strategy, a hotfix is handled via a dedicated path:
+1.  A branch is created from `main`.
+2.  The fix is applied and a PR is opened back to `main`.
+3.  The pipeline identifies the `main` target, triggers the QA-to-Prod promotion logic, and applies the updated Terraform configuration.
+4.  **Crucial Step**: After the production deploy, the fix must be merged back into `develop` to ensure the fix is not lost in future releases.
+
+## 12. Production Readiness Reflection
+### 1. What are the biggest risks in this architecture?
 Manual Back-merges: While the strategy ensures release/* goes to main, there is no automated mechanism in the YAML to ensure main is merged back into develop after a production deployment.
-### How would you monitor this service in production?
+### 2. How would you monitor this service in production?
 Cloud Logging: The application already uses logback-spring.xml and logstash-logback-encoder to emit structured JSON logs. These are automatically indexed by Google Cloud Logging for searching and alerting.
 
 Health Checks: The service exposes a /health endpoint and Spring Boot Actuator endpoints. Cloud Run uses these for liveness and readiness probes to determine if a container should be restarted.
 
 Cloud Monitoring: Integration with GCP's operations suite (formerly Stackdriver) can be used to visualize the metrics exported by the Actuator.
 
-### How would you handle rollback?
+### 3. How would you handle rollback?
 Cloud Run Revisions: Since every deployment creates a new immutable revision in Cloud Run, a rollback is performed by shifting traffic back to the previous known-good revision via the GCP Console or CLI.
 
 Pipeline Re-run: You can re-run a previous successful "Platform Delivery Pipeline" workflow in GitHub Actions. Since it uses the app_version and head_sha from the original run, it will re-deploy the exact same image and Terraform state.
 
 Terraform Revert: If the infrastructure itself changed, you would revert the Git commit and allow the CD pipeline to re-apply the previous configuration.
 
-### What would change if this handled sensitive data (PII)?
+### 4. What would change if this handled sensitive data (PII)?
 Encryption: You would likely implement Cloud KMS (Key Management Service) for application-level encryption of sensitive fields before they reach the database.
 
 Data Masking: The JSON logging configuration in logback-spring.xml would need filters(i.e., something like PatternMaskingLayout) to ensure PII is never written to stdout.
 
-### How would you secure the service if deployed in public cloud and required to be
-
-exposed externally?
+### 5. How would you secure the service if deployed in public cloud and required to be exposed externally?
 Cloud Armor (WAF): Deploy Google Cloud Armor in front of your Cloud Run service to protect against OWASP Top 10 risks (SQL injection, Cross-Site Scripting) and filter traffic based on Geo-location or IP reputation.
 
 External HTTP(S) Load Balancer: Instead of using the default Cloud Run URL, use a Global External Load Balancer. This allows you to terminate SSL/TLS at the edge and attach security policies.
