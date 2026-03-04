@@ -119,11 +119,15 @@ jobs:
         run: mvn clean test
 
       # Build and Load locally so Trivy can see it
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
       - name: Build and Export Image
         uses: docker/build-push-action@v5
         with:
           context: .
-          load: true # Loads it into the local Docker daemon
           tags: local-image:latest
           outputs: type=docker,dest=/tmp/image.tar
           build-args: |
