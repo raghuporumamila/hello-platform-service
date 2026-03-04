@@ -92,17 +92,12 @@ jobs:
           terraform init -backend=false
           terraform validate
 
-  build-scan-and-promote-to-registry:
+  test-and-scan:
     needs: [ setup, terraform-validate ]
     environment: ${{ needs.setup.outputs.env_name }}
     runs-on: ubuntu-latest
 
     env:
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
-      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
-      SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
-      REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
-      IMAGE_NAME: ${{ vars.IMAGE_NAME }}
       # Full registry path for consistency
       FULL_IMAGE_PATH: ${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}
 
@@ -123,55 +118,75 @@ jobs:
       - name: Run Unit Tests
         run: mvn clean test
 
+      # Build and Load locally so Trivy can see it
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Build and Export Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: local-image:latest
+          outputs: type=docker,dest=/tmp/image.tar
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            APP_VERSION=${{ needs.setup.outputs.app_version }}
+
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+
+      - name: Run Trivy Scanner (on exported file)
+        uses: aquasecurity/trivy-action@master
+        with:
+          input: /tmp/image.tar
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+          exit-code: '1'
+
+  promote-container-to-nonprod-registry:
+    needs: [ setup, test-and-scan ]
+    if: (github.event_name == 'pull_request' && (github.base_ref == 'develop' || startsWith(github.base_ref, 'release/'))) || (github.event_name == 'push' && startsWith(github.ref_name, 'release/'))
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.env_name }}
+    steps:
+      - name: Download Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load Image
+        run: docker load --input /tmp/image.tar
+
       - name: GCP Auth (Keyless via WIF)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ env.WIF_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_EMAIL }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for GCP
-        run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker ${{ vars.REGISTRY_REGION }}-docker.pkg.dev
 
-      # Build and Load locally so Trivy can see it
-      - name: Build Local Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
-          build-args: |
-            COMMIT_SHA=${{ github.sha }}
-            APP_VERSION=${{ needs.setup.outputs.app_version }}
-
-      # Requirement: Run vulnerability scan
-      - name: Run Trivy Scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: '${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1' # Fails the build if issues are found
-          severity: 'CRITICAL,HIGH'
-
-
-      - name: Build and Push to Artifact Registry
-        if: >-
-          (github.event_name == 'pull_request' && github.base_ref == 'develop') || 
-          (github.event_name == 'push' && startsWith(github.ref_name, 'release/'))
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.FULL_IMAGE_PATH }}:${{ github.sha }}
-            ${{ env.FULL_IMAGE_PATH }}:${{ needs.setup.outputs.app_version }}
-          build-args: |
-            COMMIT_SHA=${{ github.sha }}
-            APP_VERSION=${{ needs.setup.outputs.app_version }}
+      - name: Retag and Push
+        run: |
+          IMAGE_PATH="${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}"
+          
+          docker tag local-image:latest $IMAGE_PATH:${{ github.sha }}
+          docker tag local-image:latest $IMAGE_PATH:${{ needs.setup.outputs.app_version }}
+          
+          docker push $IMAGE_PATH:${{ github.sha }}
+          docker push $IMAGE_PATH:${{ needs.setup.outputs.app_version }}
 
   get-qa-metadata:
+    needs: [ test-and-scan ]
     if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     environment: qa # This gives us access to QA's vars.GCP_PROJECT_ID
