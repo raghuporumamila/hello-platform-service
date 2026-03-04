@@ -98,11 +98,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GCP_PROJECT: ${{ vars.GCP_PROJECT_ID }}
-      WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
-      SERVICE_ACCOUNT: ${{ vars.SA_EMAIL }}
-      REGISTRY_REGION: ${{ vars.REGISTRY_REGION }}
-      IMAGE_NAME: ${{ vars.IMAGE_NAME }}
       # Full registry path for consistency
       FULL_IMAGE_PATH: ${{ vars.REGISTRY_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/hello-platform-artifact-registry/${{ vars.IMAGE_NAME }}
 
@@ -166,14 +161,14 @@ jobs:
       - name: GCP Auth (Keyless via WIF)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ env.WIF_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.SA_EMAIL }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for GCP
-        run: gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker ${{ vars.REGISTRY_REGION }}-docker.pkg.dev
 
       - name: Retag and Push
         run: |
@@ -186,6 +181,7 @@ jobs:
           docker push $IMAGE_PATH:${{ needs.setup.outputs.app_version }}
 
   get-qa-metadata:
+    needs: [ test-and-scan ]
     if: github.ref_name == 'main' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     environment: qa # This gives us access to QA's vars.GCP_PROJECT_ID
