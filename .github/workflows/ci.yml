@@ -150,7 +150,7 @@ jobs:
 
   promote-container-to-nonprod-registry:
     needs: [ setup, test-and-scan ]
-    if: (github.event_name == 'pull_request' && github.base_ref == 'develop') || (github.event_name == 'push' && startsWith(github.ref_name, 'release/'))
+    if: (github.event_name == 'pull_request' && (github.base_ref == 'develop' || startsWith(github.base_ref, 'release/'))) || (github.event_name == 'push' && startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.env_name }}
     steps:
