@@ -123,7 +123,7 @@ Variables are declared in `variables.tf`. The region defaults to `us-east1`. All
 
 The CI pipeline is defined in `.github/workflows/ci.yml` and is named "Hello Platform Service CI". It triggers on pull requests to the `develop`, `main`, and `release/**` branches when they are opened, reopened, or synchronized.
 
-The pipeline has five jobs: `setup`, `terraform-validate`, `build-scan-and-promote-to-registry`, `get-qa-metadata`, and `promote-container-to-prod-registry`.
+The pipeline has five jobs: `setup`, `terraform-validate`, `test-and-scan`, `get-qa-metadata`, and `promote-container-to-prod-registry`.
 
 
 ### setup job
@@ -151,7 +151,7 @@ Runs Terraform format checking and validation against the `terraform` directory.
 This job always runs against the `qa` environment to have access to the WIF provider and service account variables.
 
 
-### build-scan-and-promote-to-registry job
+### test-and-scan job
 
 This is the main build job. It runs after `setup` and `terraform-validate` pass.
 
@@ -161,11 +161,25 @@ Steps:
 2. Set up JDK 17 with Temurin and Maven cache.
 3. Run `mvn checkstyle:check` to enforce code style rules.
 4. Run `mvn clean test` to execute unit tests.
-5. Authenticate with GCP using Workload Identity Federation.
-6. Configure Docker to push to Artifact Registry.
-7. Build the Docker image locally using `docker/build-push-action` with `load: true` so the image is available on the runner without being pushed to a registry. The image is tagged with the commit SHA.
-8. Run Trivy vulnerability scanner against the locally loaded image. The scan checks for CRITICAL and HIGH severity vulnerabilities and fails the build (`exit-code: 1`) if any are found that are not suppressed in `.trivyignore`.
-9. If Trivy passes, push the image to Artifact Registry tagged with both the commit SHA and the Maven version. The push step is conditional: it runs on PRs targeting `develop`, or on direct pushes to `release/**` branches.
+5. Set up Docker Buildx using the `docker-container` driver.
+6. Build the Docker image and export it as a tarball to `/tmp/image.tar` using `docker/build-push-action` with `outputs: type=docker,dest=/tmp/image.tar`. This produces a portable image file without requiring a registry push.
+7. Upload the image tarball as a GitHub Actions artifact named `docker-image` so subsequent jobs can reuse it without rebuilding.
+8. Run Trivy vulnerability scanner against the exported tarball using the `input` option. The scan checks for CRITICAL and HIGH severity vulnerabilities and fails the build (`exit-code: 1`) if any are found that are not suppressed in `.trivyignore`.
+
+The image push to Artifact Registry is handled by the separate `promote-container-to-nonprod-registry` job, which downloads the artifact uploaded in this job. This decouples scanning from promotion and ensures only a scanned image is ever pushed.
+
+
+### promote-container-to-nonprod-registry job
+
+This job runs after `test-and-scan` passes and only for PRs targeting `develop` or `release/**` branches.
+
+Steps:
+
+1. Download the `docker-image` artifact uploaded by `test-and-scan`.
+2. Load the tarball into the local Docker daemon with `docker load`.
+3. Authenticate with GCP using Workload Identity Federation.
+4. Configure Docker for Artifact Registry using `gcloud auth configure-docker`.
+5. Retag the loaded image with both the commit SHA and the Maven version, then push both tags to the non-prod Artifact Registry.
 
 The push step is skipped for PRs targeting `main` — those use the promote flow described below.
 
@@ -288,7 +302,7 @@ The `WIF_PROVIDER` and `SA_EMAIL` (or `CD_SA_EMAIL` for the CD pipeline) values 
 
 ## 9. Security and vulnerability scanning
 
-Trivy runs on every PR as part of the `build-scan-and-promote-to-registry` job. It scans the locally built Docker image for CRITICAL and HIGH severity CVEs before any image is pushed to a registry. If vulnerabilities are found the build fails and the image is not pushed.
+Trivy runs on every PR as part of the `test-and-scan` job. It scans the exported Docker image tarball (`/tmp/image.tar`) for CRITICAL and HIGH severity CVEs before any image is pushed to a registry. If vulnerabilities are found the build fails and the image is not pushed.
 
 The `.trivyignore` file suppresses three CVEs that have been reviewed and determined to be false positives or not applicable:
 
@@ -372,7 +386,7 @@ The CI/CD pipeline dynamically adapts its behavior based on the branch context:
 
 ### 4. Build Promotion
 Builds are promoted through **Container Image Promotion** rather than rebuilding from source:
-1.  **Artifact Creation**: Images are built and tagged with the git SHA and Maven version during the `develop` or `release` phases.
+1.  **Artifact Creation**: Images are built and tagged with the git SHA and Maven version during the `develop` or `release` phases. The image is first exported as a tarball artifact (`docker-image`) to decouple the build from the push, allowing Trivy to scan it before it ever touches a registry.
 2.  **Promotion to Prod**: When merging to `main`, the `promote-container-to-prod-registry` job pulls the verified image from the QA registry and pushes it to the Prod registry. This guarantees that the exact binary tested in QA is what runs in Production.
 
 ### 5. Scaling for 10–20 Engineers
