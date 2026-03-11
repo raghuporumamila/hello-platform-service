@@ -29,7 +29,7 @@ public final class HelloController {
     }
 
     /**
-     * Retrieves the current version/commit information of the application.
+     * Retrieves the current version/commit information of the application1.
      *
      * @return A map containing the commit SHA.
      */
